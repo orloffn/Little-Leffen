@@ -24,9 +24,6 @@ class GameState(Game):
     def press_z(self):
         self.pad.press_button(Button.BUTTON_Z)
 
-    def press_start(self):
-        self.pad.press_button(Button.BUTTON_START)
-
     def clear_buttons(self):
         self.pad.release_all()
 
@@ -39,9 +36,49 @@ class GameState(Game):
                 self.press_x,
                 self.press_l,
                 self.press_r,
-                self.press_z,
-                self.press_start]
+                self.press_z]
 
+    @staticmethod
+    def get_playerdata(p):
+        """
+        get state of a player for game state function
+        """
+        return [p.action.value,
+                p.action_frame,
+                p.ecb_bottom,
+                p.ecb_left,
+                p.ecb_right,
+                p.ecb_top,
+                p.facing,
+                p.hitlag,
+                p.hitstun_frames_left,
+                p.invulnerability_left,
+                p.invulnerable,
+                p.jumps_left,
+                p.off_stage,
+                p.on_ground,
+                p.percent,
+                p.shield_strength,
+                p.speed_air_x_self,
+                p.speed_ground_x_self,
+                p.speed_x_attack,
+                p.speed_y_attack,
+                p.speed_y_self,
+                p.stock,
+                p.x,
+                p.y]
+
+    def read_state(self):
+        """
+        parse the next gamestate to get inputs for the network
+        return array representation of melee state
+        """
+        s = self.game.get_next_state()
+        out = [s.distance]
+        out += self.get_playerdata(s.player[4])
+        for i in [k for k in s.player.keys() if k is not 4]:
+            out += self.get_playerdata(s.player[i])
+        return out
 
 if __name__ == '__main__':
     obj = GameState()

@@ -1,5 +1,5 @@
 """
-Interface with dolphin
+https://libmelee.readthedocs.io/en/latest/
 """
 import melee
 
