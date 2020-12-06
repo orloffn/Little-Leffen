@@ -1,42 +1,64 @@
 from melee.enums import Button
 from game import Game
 
-class GameState(Game):
+# TODO: Actions for moving sticks
+# TODO: Action for setting analog trigger
+
+class GameState():
     """docstring for GameState"""
-    def __init__(self):
-        super(GameState, self).__init__()
+
+    NUM_ACTIONS = 8         # TODO: programmatically get these instead of hardcoding
+    NUM_OBSERVATIONS = 47
+
+    def __init__(self, game):
+        self.game = game
 
     def press_a(self):
-        self.pad.press_button(Button.BUTTON_A)
+        self.game.pad.press_button(Button.BUTTON_A)
 
     def press_b(self):
-        self.pad.press_button(Button.BUTTON_B)
+        self.game.pad.press_button(Button.BUTTON_B)
 
     def press_x(self):
-        self.pad.press_button(Button.BUTTON_X)
-
-    def press_l(self):
-        self.pad.press_button(Button.BUTTON_L)
+        self.game.pad.press_button(Button.BUTTON_X)
 
     def press_r(self):
-        self.pad.press_button(Button.BUTTON_R)
+        self.game.pad.press_button(Button.BUTTON_R)
 
     def press_z(self):
-        self.pad.press_button(Button.BUTTON_Z)
+        self.game.pad.press_button(Button.BUTTON_Z)
+
+    def set_light_shield(self):
+        self.game.pad.press_shoulder(Button.BUTTON_L, .1)
+
+    def set_grey_stick(self, x, y):
+        self.game.pad.tilt_analog(Button.BUTTON_MAIN, x, y)
+
+    def set_c_stick(self, x, y):
+        self.game.pad.tilt_analog(Button.BUTTON_C, x, y)
 
     def clear_buttons(self):
-        self.pad.release_all()
+        self.game.pad.release_all()
 
-    def get_next_state(self):
-        return self.con.step()
+    def step(self):
+        s = self.game.con.step()
+        if not self.game.in_game:
+            return []
+        out = [s.distance]
+        out += self.get_playerdata(s.player[self.game.port])
+        for i in [k for k in s.player.keys() if k is not self.game.port]:
+            out += self.get_playerdata(s.player[i])
+        return out
 
     def get_actions(self):
         return [self.press_a,
                 self.press_b,
                 self.press_x,
-                self.press_l,
                 self.press_r,
-                self.press_z]
+                self.press_z,
+                self.set_light_shield,
+                self.set_grey_stick,
+                self.set_c_stick]
 
     @staticmethod
     def get_playerdata(p):
@@ -68,22 +90,11 @@ class GameState(Game):
                 p.x,
                 p.y]
 
-    def read_state(self):
-        """
-        parse the next gamestate to get inputs for the network
-        return array representation of melee state
-        """
-        s = self.game.get_next_state()
-        out = [s.distance]
-        out += self.get_playerdata(s.player[4])
-        for i in [k for k in s.player.keys() if k is not 4]:
-            out += self.get_playerdata(s.player[i])
-        return out
-
 if __name__ == '__main__':
-    obj = GameState()
+    game = Game(4)
+    test = GameState(game)
     while True:
-        obj.get_next_state()
-        obj.clear_buttons()
-        obj.get_next_state()
-        obj.press_b()
+        test.clear_buttons()
+        test.step()
+        test.press_b()
+        test.step()

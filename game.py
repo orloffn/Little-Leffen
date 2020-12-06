@@ -9,9 +9,11 @@ GAME_PATH = '../FM-Slippi'
 
 class Game():
     """docstring for Game"""
-    def __init__(self):
+    def __init__(self, p):
+        self.port = p
+        self.in_game = False
         self.con = melee.Console(path=GAME_PATH)
-        self.pad = melee.Controller(console=self.con, port=4)
+        self.pad = melee.Controller(console=self.con, port=p)
         self.con.run()
         self.con.connect()
         self.pad.connect()
@@ -19,6 +21,7 @@ class Game():
     def get_to_the_fun_part(self,
                             char=melee.enums.Character.FOX,
                             stage=melee.enums.Stage.RANDOM_STAGE):
+        self.in_game = False
         state = self.con.step()
         while state.menu_state is not melee.Menu.IN_GAME:
             melee.MenuHelper.menu_helper_simple(state,
@@ -29,6 +32,7 @@ class Game():
                                                 autostart=True,
                                                 swag=False)
             state = self.con.step()
+        self.in_game = True
 
 
 if __name__ == '__main__':
