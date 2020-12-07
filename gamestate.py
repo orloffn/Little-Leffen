@@ -1,4 +1,5 @@
 from melee.enums import Button
+from melee import Menu
 from game import Game
 
 # TODO: Actions for moving sticks
@@ -12,6 +13,7 @@ class GameState():
 
     def __init__(self, game):
         self.game = game
+        self.current_state = None
 
     def press_a(self):
         self.game.pad.press_button(Button.BUTTON_A)
@@ -42,7 +44,8 @@ class GameState():
 
     def step(self):
         s = self.game.con.step()
-        if not self.game.in_game:
+        self.current_state = s
+        if not s.menu_state == Menu.IN_GAME:
             return []
         out = [s.distance]
         out += self.get_playerdata(s.player[self.game.port])
@@ -89,6 +92,16 @@ class GameState():
                 p.stock,
                 p.x,
                 p.y]
+
+    @staticmethod
+    def is_done(state):
+        if self.current_state.menu_state == Menu.IN_GAME:
+            for i in self.current_state.player:
+                if self.current_state.player[i].stock == 0:
+                    return True
+            return False
+        return True
+
 
 if __name__ == '__main__':
     game = Game(4)
