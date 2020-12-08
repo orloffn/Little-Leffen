@@ -33,13 +33,16 @@ class GameState():
     def set_light_shield(self):
         self.game.pad.press_shoulder(Button.BUTTON_L, .1)
 
-    def set_grey_stick(self, x, y):
+    def set_grey_stick(self, coord):
+        x, y = coord
         self.game.pad.tilt_analog(Button.BUTTON_MAIN, x, y)
 
-    def set_c_stick(self, x, y):
+    def set_c_stick(self, val):
+        x = val % 2
+        y = (val + 1) % 2
         self.game.pad.tilt_analog(Button.BUTTON_C, x, y)
 
-    def clear_buttons(self):
+    def clear(self):
         self.game.pad.release_all()
 
     def step(self):
@@ -93,8 +96,7 @@ class GameState():
                 p.x,
                 p.y]
 
-    @staticmethod
-    def is_done(state):
+    def is_done(self, state):
         if self.current_state.menu_state == Menu.IN_GAME:
             for i in self.current_state.player:
                 if self.current_state.player[i].stock == 0:
