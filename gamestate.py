@@ -9,7 +9,7 @@ class GameState():
     """docstring for GameState"""
 
     NUM_ACTIONS = 8         # TODO: programmatically get these instead of hardcoding
-    NUM_OBSERVATIONS = 47
+    NUM_OBSERVATIONS = 41
 
     def __init__(self, game):
         self.game = game
@@ -38,8 +38,16 @@ class GameState():
         self.game.pad.tilt_analog(Button.BUTTON_MAIN, x, y)
 
     def set_c_stick(self, val):
-        x = val % 2
-        y = (val + 1) % 2
+        if val == 0:
+            x = y = .5
+        elif val == 1:
+            x, y = 0, .5
+        elif val == 2:
+            x, y = .5, 1
+        elif val == 3:
+            x, y = 1, .5
+        elif val == 4:
+            x, y = .5, 0
         self.game.pad.tilt_analog(Button.BUTTON_C, x, y)
 
     def clear(self):
@@ -50,9 +58,12 @@ class GameState():
         self.current_state = s
         if not s.menu_state == Menu.IN_GAME:
             return []
+        return s
+
+    def get_state_list(self, s):
         out = [s.distance]
         out += self.get_playerdata(s.player[self.game.port])
-        for i in [k for k in s.player.keys() if k is not self.game.port]:
+        for i in [k for k in s.player.keys() if k != self.game.port]:
             out += self.get_playerdata(s.player[i])
         return out
 
@@ -73,18 +84,14 @@ class GameState():
         """
         return [p.action.value,
                 p.action_frame,
-                p.ecb_bottom,
-                p.ecb_left,
-                p.ecb_right,
-                p.ecb_top,
-                p.facing,
-                p.hitlag,
+                int(p.facing),
+                int(p.hitlag),
                 p.hitstun_frames_left,
                 p.invulnerability_left,
-                p.invulnerable,
+                int(p.invulnerable),
                 p.jumps_left,
-                p.off_stage,
-                p.on_ground,
+                int(p.off_stage),
+                int(p.on_ground),
                 p.percent,
                 p.shield_strength,
                 p.speed_air_x_self,

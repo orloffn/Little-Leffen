@@ -20,17 +20,35 @@ class Env(gym.Env):
         grey_stick = spaces.Box(low=np.array([0.0, 0.0]), 
                                 high=np.array([1.0, 1.0]),
                                 dtype=np.float32)
-        c_stick = spaces.Discrete(4)
+        c_stick = spaces.Discrete(5)
         self.action_space = spaces.Tuple((buttons, grey_stick, c_stick))
         self.observation_space = spaces.Discrete(GameState.NUM_OBSERVATIONS)
         self.seed()
         self.reset()
 
+    def reward_percent(self, prev, new):
+        port = self.gamestate.game.port
+        out = -1 * (new.player[port].percent - prev.player[port].percent)
+        for i in [k for k in prev.player.keys() if k != port]:
+            out = new.player[i].percent - prev.player[i].percent
+        return out
+
+    def reward_stocks(self, prev, new):
+        port = self.gamestate.game.port
+        out = -100 * (prev.player[port].stock - \
+                      new.player[port].stock)
+        for i in [k for k in prev.player.keys() if k != port]:
+            out = 100 * (prev.player[i].stock - \
+                         new.player[i].stock)
+        return out
+
     def reward(self, prev, new):
         """
         get the reward associated with a new state
         """
-        return 0
+        if prev is None:
+            return 0
+        return self.reward_stocks(prev, new) + self.reward_percent(prev, new)
 
     def done(self, state):
         """
@@ -52,7 +70,9 @@ class Env(gym.Env):
         self.gamestate.set_grey_stick(action[1])
         self.gamestate.set_c_stick(action[2])
         new = self.gamestate.step()
-        return new, self.reward(prev, new), self.done(new), {}
+        return self.gamestate.get_state_list(new), \
+               self.reward(prev, new), \
+               self.done(new), {}
 
     def reset(self):
         """
@@ -65,11 +85,15 @@ class Env(gym.Env):
         """
         represent the environment to someone
         """
-        pass
+        if self.gamestate.current_state is not None:
+            port = self.gamestate.game.port
+            player = self.gamestate.current_state.player[port]
+            print('Port {} at {}, {} with {}%'.format(\
+                port, int(player.x), int(player.y), player.percent))
 
 
 if __name__ == '__main__':
-    game = Game(4)
+    game = Game(2)
     gs = GameState(game)
     env = Env(gs)
     env.reset()
