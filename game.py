@@ -30,6 +30,7 @@ class Game():
                                                 autostart=True,
                                                 swag=False)
             state = self.con.step()
+        return state
 
 
 if __name__ == '__main__':

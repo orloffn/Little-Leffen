@@ -8,7 +8,7 @@ from game import Game
 class GameState():
     """docstring for GameState"""
 
-    NUM_ACTIONS = 8         # TODO: programmatically get these instead of hardcoding
+    NUM_ACTIONS = 9         # TODO: programmatically get these instead of hardcoding
     NUM_OBSERVATIONS = 41
 
     def __init__(self, game):

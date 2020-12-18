@@ -1,40 +1,57 @@
-"""
-https://stackoverflow.com/questions/44469266/how-to-implement-custom-environment-in-keras-rl-openai-gym
-https://github.com/openai/gym/blob/master/gym/envs/toy_text/hotter_colder.py
-"""
+from tensorforce import Environment
 from time import sleep
 from ast import literal_eval
-import numpy as np
-import gym
-from gym import spaces
-from gym.utils import seeding
+from random import random
 
 import pandas as pd
 
 from gamestate import GameState
 from game import Game
 
-ACTION_SPACE = spaces.Tuple((spaces.MultiDiscrete( \
-                            [2 for _ in range(GameState.NUM_ACTIONS - 2)]),
-                            spaces.Box(low=np.array([0.0, 0.0]), 
-                                       high=np.array([1.0, 1.0]),
-                                       dtype=np.float32),
-                            spaces.Discrete(5)))
-OBSERVATION_SPACE = spaces.Discrete(GameState.NUM_OBSERVATIONS)
 
 TRAINING_DATA_FILE = 'training_data.csv'
 SIMULATED_ACTION_THRESH = .01
+SIMULATED_EPISODE_LEN = 500
 
 
-class Live(gym.Env):
-    """Environment to interact with dolphin"""
+def convert_c_stick(val):
+    if val < 0.2: return 0
+    if val < 0.4: return 1
+    if val < 0.6: return 2
+    if val < 0.8: return 3
+    return 4
+
+
+def convert_action(action):
+    out = []
+    for i in action[0:6]:
+        if i > .5: out.append(1)
+        else: out.append(0)
+    out += [i for i in action[6:8]]
+    out.append(convert_c_stick(action[8]))
+    return out
+
+
+class Live(Environment):
+    """docstring for Live"""
     def __init__(self, gs):
+        super().__init__()
         self.gamestate = gs
-        k = GameState.NUM_ACTIONS - 2
-        self.action_space = ACTION_SPACE
-        self.observation_space = OBSERVATION_SPACE
-        self.seed()
-        self.reset()
+
+    def states(self):
+        return dict(type='float', shape=(41,))
+
+    def actions(self):
+        return dict(type='float', shape=9, min_value=0, max_value=1)
+
+    def done(self, state):
+        """
+        get done status of a state
+        """
+        return self.gamestate.is_done(state)
+
+    def max_episode_timesteps(self):
+        return super().max_episode_timesteps()
 
     def reward_percent(self, prev, new):
         port = self.gamestate.game.port
@@ -60,101 +77,92 @@ class Live(gym.Env):
             return 0
         return self.reward_stocks(prev, new) + self.reward_percent(prev, new)
 
-    def done(self, state):
-        """
-        get done status of a state
-        """
-        return self.gamestate.is_done(state)
+    def reset(self):
+        state = self.gamestate.game.get_to_the_fun_part()
+        sleep(.8)
+        return state
 
-
-    def step(self, action):
-        """
-        do the action, return:
-            next state, reward, done flag
-        """
+    def execute(self, actions):
         prev = self.gamestate.current_state
         self.gamestate.clear()
-        for i in range(len(action[0])):
-            if action[0][i] == 1:
+        action = convert_action(actions)
+        for i in range(len(action[0:6])):
+            if action[i] == 1:
                 self.gamestate.get_actions()[i]()
-        self.gamestate.set_grey_stick(action[1])
-        self.gamestate.set_c_stick(action[2])
+        self.gamestate.set_grey_stick(action[6:8])
+        self.gamestate.set_c_stick(action[8])
         new = self.gamestate.step()
         return self.gamestate.get_state_list(new), \
-               self.reward(prev, new), \
-               self.done(new), {}
-
-    def reset(self):
-        """
-        reset / start a new game
-        """
-        self.gamestate.game.get_to_the_fun_part()
-        sleep(.8)        
-
-    def render(self, mode='human', **kwargs):
-        """
-        represent the environment to someone
-        """
-        if self.gamestate.current_state is not None:
-            port = self.gamestate.game.port
-            player = self.gamestate.current_state.player[port]
-            print('Port {} at {}, {} with {}%'.format(\
-                port, int(player.x), int(player.y), player.percent))
+               self.done(new), \
+               self.reward(prev, new)
 
 
-class Simulated(gym.Env):
+class Simulated(Environment):
     """docstring for Simulated"""
     def __init__(self, file, size=None):
+        super().__init__()
         print('Loading training csv...')
         self.df = pd.read_csv(file, header=None, nrows=size)
         print('Training data loaded')
-        self.row_iter = None
+        self.start_index = self.get_new_index()
+        self.current_index = self.start_index
         self.current_state = None
-        self.action_space = ACTION_SPACE
-        self.observation_space = OBSERVATION_SPACE
-        self.seed()
-        self.reset()
+
+    def states(self):
+        return dict(type='float', shape=(41,))
+
+    def actions(self):
+        return dict(type='float', shape=9, min_value=0, max_value=1)
+
+    def max_episode_timesteps(self):
+        return super().max_episode_timesteps()
+
+    def get_new_index(self):
+        return int(random() * len(self.df.index))
         
-    def step(self, action):
+    def execute(self, actions):
         true = literal_eval(self.current_state[GameState.NUM_OBSERVATIONS])
-        pred = list(action[0]) + list(action[1]) + [action[2]]
+        pred = convert_action(actions)
         reward = 0
         for i in range(len(pred)):
             if abs(true[i] - pred[i]) < SIMULATED_ACTION_THRESH:
                 reward += 1
-        try:
-            self.current_state = next(self.row_iter)[1]
-            done = False
-        except StopIteration:
-            done = True
-        return self.current_state.tolist()[:-1], reward, done, {}
+        self.current_index += 1
+        self.current_state = self.df.loc[self.current_index % len(self.df.index)]
+        done = self.current_index - self.start_index > SIMULATED_EPISODE_LEN
+        return self.current_state.tolist()[:-1], done, reward
 
     def reset(self):
-        self.row_iter = self.df.iterrows()
-        self.current_state = next(self.row_iter)[1]
-
-    def render(self, mode='human', **kwargs):
-        print(self.current_state.tolist())
-
+        self.start_index = self.get_new_index()
+        self.current_index = self.start_index
+        self.current_state = self.df.loc[self.current_index % len(self.df.index)]
+        return self.current_state.tolist()[:-1]
+        
 
 def test_live():
     game = Game(2)
     gs = GameState(game)
     env = Live(gs)
+    print(env.states(), env.actions())
+    env.reset()
     for i in range(1000):
-        env.render()
-        action = env.action_space.sample()
-        obs, reward, done, _ = env.step(action)
+        action = [random() for i in range(env.actions()['num_values'])]
+        obs, done, reward = env.execute(action)
         if done: env.reset()
 
 
 def test_sim():
     env = Simulated(TRAINING_DATA_FILE, 100)
-    for i in range(199):
-        env.render()
-        action = env.action_space.sample()
-        obs, reward, done, _ = env.step(action)
-        if done: env.reset()
+    env.reset()
+    done = False
+    for _ in range(3):
+        while not done:
+            action = [random() for i in range(env.actions()['num_values'])]
+            obs, done, reward = env.execute(action)
+        env.reset()
+    print('sample action:\n', action)
+    print('sample observation:\n', obs)
+
 
 if __name__ == '__main__':
     test_sim()
