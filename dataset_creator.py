@@ -10,32 +10,18 @@ import os
 
 
 CHARACTER = Character.FOX
-DIR = '../Slippi'
+DIR = 'C:/Users/ameof/Documents/Slippi'
 EXPORT_FILE = 'training_data.csv'
 BATCH_SIZE = 10
 
 
 def get_playerdata(p):
-    return [p.action.value,
-            p.action_frame,
-            int(p.facing),
-            int(p.hitlag),
-            p.hitstun_frames_left,
-            p.invulnerability_left,
-            int(p.invulnerable),
-            p.jumps_left,
-            int(p.off_stage),
-            int(p.on_ground),
-            p.percent,
-            p.shield_strength,
-            p.speed_air_x_self,
-            p.speed_ground_x_self,
-            p.speed_x_attack,
-            p.speed_y_attack,
-            p.speed_y_self,
-            p.stock,
+    return [p.percent,
             p.x,
-            p.y]
+            p.y,
+            int(p.hitlag_left),
+            int(p.invulnerable),
+            int(p.off_stage)]
 
 
 def get_obs(state, port):
@@ -91,7 +77,7 @@ def read_file(fname):
     state = console.step()
     ports = find_ports_for_char(state, CHARACTER)
     state_list = []
-    if ports is not []:
+    if ports is not [] and len(state.players) == 2:
         while state is not None:
             try:
                 state_list += get_row(state, ports)    

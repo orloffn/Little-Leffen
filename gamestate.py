@@ -2,14 +2,11 @@ from melee.enums import Button
 from melee import Menu
 from game import Game
 
-# TODO: Actions for moving sticks
-# TODO: Action for setting analog trigger
-
 class GameState():
     """docstring for GameState"""
 
-    NUM_ACTIONS = 9         # TODO: programmatically get these instead of hardcoding
-    NUM_OBSERVATIONS = 41
+    NUM_ACTIONS = 9
+    NUM_OBSERVATIONS = 13
 
     def __init__(self, game):
         self.game = game
@@ -82,41 +79,28 @@ class GameState():
         """
         get state of a player for game state function
         """
-        return [p.action.value,
-                p.action_frame,
-                int(p.facing),
-                int(p.hitlag),
-                p.hitstun_frames_left,
-                p.invulnerability_left,
-                int(p.invulnerable),
-                p.jumps_left,
-                int(p.off_stage),
-                int(p.on_ground),
-                p.percent,
-                p.shield_strength,
-                p.speed_air_x_self,
-                p.speed_ground_x_self,
-                p.speed_x_attack,
-                p.speed_y_attack,
-                p.speed_y_self,
-                p.stock,
+        return [p.percent,
                 p.x,
-                p.y]
+                p.y,
+                int(p.hitlag_left),
+                int(p.invulnerable),
+                int(p.off_stage)]
 
     def is_done(self, state):
         if self.current_state.menu_state == Menu.IN_GAME:
             for i in self.current_state.player:
                 if self.current_state.player[i].stock == 0:
                     return True
+                    print(i, self.current_state.player[i].stock)
             return False
         return True
 
 
 if __name__ == '__main__':
-    game = Game(4)
+    game = Game(1)
     test = GameState(game)
     while True:
-        test.clear_buttons()
+        test.clear()
         test.step()
         test.press_b()
         test.step()

@@ -11,7 +11,7 @@ from game import Game
 
 TRAINING_DATA_FILE = 'training_data.csv'
 SIMULATED_ACTION_THRESH = .01
-SIMULATED_EPISODE_LEN = 500
+SIMULATED_EPISODE_LEN = 50
 
 
 def convert_c_stick(val):
@@ -22,13 +22,9 @@ def convert_c_stick(val):
     return 4
 
 
-def convert_action(action):
-    out = []
-    for i in action[0:6]:
-        if i > .5: out.append(1)
-        else: out.append(0)
-    out += [i for i in action[6:8]]
-    out.append(convert_c_stick(action[8]))
+def convert_action(b_action, s_action):
+    out = [int(i) for i in list(b_action)] + list(s_action)
+    out[-1] = convert_c_stick(out[-1])
     return out
 
 
@@ -39,10 +35,10 @@ class Live(Environment):
         self.gamestate = gs
 
     def states(self):
-        return dict(type='float', shape=(41,))
+        return dict(type='float', shape=(GameState.NUM_OBSERVATIONS,))
 
-    def actions(self):
-        return dict(type='float', shape=9, min_value=0, max_value=1)
+    # def actions(self):
+    #     return dict(type='float', shape=GameState.NUM_ACTIONS, min_value=0, max_value=1)
 
     def done(self, state):
         """
@@ -54,19 +50,22 @@ class Live(Environment):
         return super().max_episode_timesteps()
 
     def reward_percent(self, prev, new):
+        out = 0
         port = self.gamestate.game.port
-        out = -1 * (new.player[port].percent - prev.player[port].percent)
+        out -= 1 * (new.player[port].percent - prev.player[port].percent)
         for i in [k for k in prev.player.keys() if k != port]:
-            out = new.player[i].percent - prev.player[i].percent
+            out += new.player[i].percent - prev.player[i].percent
         return out
 
     def reward_stocks(self, prev, new):
+        out = 0
         port = self.gamestate.game.port
-        out = -100 * (prev.player[port].stock - \
+        out -= 100 * (prev.player[port].stock - \
                       new.player[port].stock)
         for i in [k for k in prev.player.keys() if k != port]:
-            out = 100 * (prev.player[i].stock - \
+            out += 100 * (prev.player[i].stock - \
                          new.player[i].stock)
+        if abs(out) > 200: return 0
         return out
 
     def reward(self, prev, new):
@@ -80,17 +79,16 @@ class Live(Environment):
     def reset(self):
         state = self.gamestate.game.get_to_the_fun_part()
         sleep(.8)
-        return state
+        return self.gamestate.get_state_list(state)
 
     def execute(self, actions):
         prev = self.gamestate.current_state
         self.gamestate.clear()
-        action = convert_action(actions)
-        for i in range(len(action[0:6])):
-            if action[i] == 1:
+        for i in range(len(actions[0:6])):
+            if actions[i] == 1:
                 self.gamestate.get_actions()[i]()
-        self.gamestate.set_grey_stick(action[6:8])
-        self.gamestate.set_c_stick(action[8])
+        self.gamestate.set_grey_stick(actions[6:8])
+        self.gamestate.set_c_stick(actions[8])
         new = self.gamestate.step()
         return self.gamestate.get_state_list(new), \
                self.done(new), \
@@ -109,27 +107,32 @@ class Simulated(Environment):
         self.current_state = None
 
     def states(self):
-        return dict(type='float', shape=(41,))
+        return dict(type='float', shape=(GameState.NUM_OBSERVATIONS,))
 
-    def actions(self):
-        return dict(type='float', shape=9, min_value=0, max_value=1)
+    # def actions(self):
+    #     return dict(type='float', shape=GameState.NUM_ACTIONS, min_value=0, max_value=1)
 
     def max_episode_timesteps(self):
         return super().max_episode_timesteps()
 
     def get_new_index(self):
         return int(random() * len(self.df.index))
+
+    def reward(self, true, pred):
+        reward = [0.0, 0.0]
+        for i in [0, 1, 2, 3, 4, 5, 8]:
+            if true[i] == pred[i]:
+                reward[0] += .05
+        for i in [6, 7]:
+            reward[1] += ((1.0 - abs(true[i] - pred[i])))
+        return reward
         
     def execute(self, actions):
         true = literal_eval(self.current_state[GameState.NUM_OBSERVATIONS])
-        pred = convert_action(actions)
-        reward = 0
-        for i in range(len(pred)):
-            if abs(true[i] - pred[i]) < SIMULATED_ACTION_THRESH:
-                reward += 1
+        reward = self.reward(true, actions)
         self.current_index += 1
         self.current_state = self.df.loc[self.current_index % len(self.df.index)]
-        done = self.current_index - self.start_index > SIMULATED_EPISODE_LEN
+        done = self.current_index - self.start_index >= SIMULATED_EPISODE_LEN
         return self.current_state.tolist()[:-1], done, reward
 
     def reset(self):
@@ -146,7 +149,7 @@ def test_live():
     print(env.states(), env.actions())
     env.reset()
     for i in range(1000):
-        action = [random() for i in range(env.actions()['num_values'])]
+        action = [random() for i in range(env.actions()['shape'])]
         obs, done, reward = env.execute(action)
         if done: env.reset()
 
@@ -157,7 +160,7 @@ def test_sim():
     done = False
     for _ in range(3):
         while not done:
-            action = [random() for i in range(env.actions()['num_values'])]
+            action = [random() for i in range(env.actions()['shape'])]
             obs, done, reward = env.execute(action)
         env.reset()
     print('sample action:\n', action)
@@ -165,4 +168,4 @@ def test_sim():
 
 
 if __name__ == '__main__':
-    test_sim()
+    test_live()

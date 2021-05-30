@@ -1,0 +1,18 @@
+article notes
+
+getting good results via policy gradient methods is challenging because they are sensitive to the choice of stepsize — too small, and progress is hopelessly slow; too large and the signal is overwhelmed by the noise, or one might see catastrophic drops in performance. They also often have very poor sample efficiency, taking millions (or billions) of timesteps to learn simple tasks.
+
+batch size is very important
+
+important hyperparameters:
+batch size
+network
+learning rate
+baseline optimizer
+l2 optimizer
+entropy regularization
+discount
+variable noise
+likelihood ratio clipping?
+multi step?
+subsampling fraction?

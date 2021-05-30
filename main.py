@@ -1,32 +1,49 @@
-"""
-https://keras-rl.readthedocs.io/en/latest/
-https://github.com/keras-rl/keras-rl/blob/master/examples/sarsa_cartpole.py
-"""
-
-from keras.models import Sequential
-from keras.layers import Dense, Activation, Flatten
-from keras.optimizers import Adam
-
-from rl.agents import NAFAgent
-from rl.policy import BoltzmannQPolicy
-
+from env import *
+from agent import *
 from gamestate import GameState
 from game import Game
 
+import pandas as pd
 
-def main():
-    g = Game(4)
-    test = GameState(g)
-    for i in range(2):
-        test.game.get_to_the_fun_part()
-        d = False
-        while not d:
-            state = test.step()
-            d = test.is_done(state)
-            for i in state[1].player:
-                print(state[1].player[i].stock)
-        print(d)
+
+TRAIN_STEPS = 100
+TEST_STEPS = 1000000
+
+
+def train_simulated(checkpoint):
+    env = Simulated('training_data.csv')
+    test = LittleLeffen(env, checkpoint)
+    test.fit(TRAIN_STEPS)
+    test.save()
+    # test.close()
+
+
+def train_with_me(checkpoint):
+    test = LittleLeffen(Live(GameState(Game(4))), checkpoint)
+    test.fit(TRAIN_STEPS)
+    test.save()
+    # test.close()
+
+
+def test_simulated():
+    env = Simulated('training_data_filtered.csv', TEST_STEPS)
+    test = LittleLeffen(env, True)
+    test.test(TEST_STEPS)
+    # test.close()
+
+
+def test_live():
+    env = Live(GameState(Game(4)))
+    test = LittleLeffen(env, True)
+    test.test(TEST_STEPS)
+    # test.close()
+
+
+def remove_neutral_states(file):
+    df = pd.read_csv(file, header=None)
+    df = df[df[7] != '[0, 0, 0, 0, 0, 0, 0.5, 0.5, 0]']
+    df.to_csv('training_data_filtered.csv', index=False, header=False)
 
 
 if __name__ == '__main__':
-    main()
+    test_live()
