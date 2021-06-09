@@ -37,9 +37,6 @@ class Live(Environment):
     def states(self):
         return dict(type='float', shape=(GameState.NUM_OBSERVATIONS,))
 
-    # def actions(self):
-    #     return dict(type='float', shape=GameState.NUM_ACTIONS, min_value=0, max_value=1)
-
     def done(self, state):
         """
         get done status of a state
@@ -108,9 +105,6 @@ class Simulated(Environment):
 
     def states(self):
         return dict(type='float', shape=(GameState.NUM_OBSERVATIONS,))
-
-    # def actions(self):
-    #     return dict(type='float', shape=GameState.NUM_ACTIONS, min_value=0, max_value=1)
 
     def max_episode_timesteps(self):
         return super().max_episode_timesteps()

@@ -1,6 +1,6 @@
 example.py
 __pycache__
 *.csv
-foo.py
-weights
-StreamableDolphin
+weights/buttons/*
+weights/stick/*
+StreamableDolphin/*

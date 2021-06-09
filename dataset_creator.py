@@ -10,7 +10,7 @@ import os
 
 
 CHARACTER = Character.FOX
-DIR = 'C:/Users/ameof/Documents/Slippi'
+DIR = '../../../Slippi'
 EXPORT_FILE = 'training_data.csv'
 BATCH_SIZE = 10
 

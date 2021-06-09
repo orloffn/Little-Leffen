@@ -6,8 +6,8 @@ from game import Game
 import pandas as pd
 
 
-TRAIN_STEPS = 100
-TEST_STEPS = 1000000
+TRAIN_STEPS = 500
+TEST_STEPS = 100
 
 
 def train_simulated(checkpoint):

@@ -11,7 +11,7 @@ from tensorforce import Agent
 
 class CreateAgentHelper():
     """docstring for CreateAgentHelper"""
-    def __init__(self, environment, actions, agent='ppo', network='auto', batch_size=10, update_frequency=2,
+    def __init__(self, environment, actions, agent='ppo', network='auto', batch_size=25, update_frequency=2,
                  learning_rate=1e-3, subsampling_fraction=.2, multi_step=5, likelihood_ratio_clipping=.2,
                  discount=.99, predict_terminal_values=False, baseline='auto',
                  baseline_optimizer=dict(optimizer='adam', multi_step=10, learning_rate=1e-3),
